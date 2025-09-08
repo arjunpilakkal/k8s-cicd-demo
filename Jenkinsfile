@@ -40,11 +40,12 @@ pipeline {
       }
     }*/
 
-    stage('Deploy to Kubernetes') {
+   stage('Deploy to Kubernetes') {
   steps {
     withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
-      sh "kubectl set image deployment/k8s-cicd-demo web=${DOCKER_IMAGE}:${DOCKER_TAG} --record || true"
-      sh "kubectl apply -f k8s/service.yaml || true"
+      sh "kubectl apply -f k8s/deployment.yaml"
+      sh "kubectl apply -f k8s/service.yaml"
+      sh "kubectl set image deployment/k8s-cicd-demo web=${DOCKER_IMAGE}:${DOCKER_TAG} || true"
       sh "kubectl rollout status deployment/k8s-cicd-demo --timeout=120s"
     }
   }
