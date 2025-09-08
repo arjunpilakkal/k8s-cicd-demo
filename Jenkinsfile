@@ -31,14 +31,24 @@ pipeline {
       }
     }
 
-    stage('Deploy to Kubernetes') {
+    /*stage('Deploy to Kubernetes') {
       steps {
         // Option A: If Jenkins has kubectl configured (kubeconfig in Jenkins home)
         sh "kubectl set image deployment/k8s-cicd-demo web=${DOCKER_IMAGE}:${DOCKER_TAG} --record || true"
         sh "kubectl apply -f k8s/service.yaml || true"
         sh "kubectl rollout status deployment/k8s-cicd-demo --timeout=120s"
       }
+    }*/
+
+    stage('Deploy to Kubernetes') {
+  steps {
+    withCredentials([file(credentialsId: 'kubeconfig-cred', variable: 'KUBECONFIG')]) {
+      sh "kubectl set image deployment/k8s-cicd-demo web=${DOCKER_IMAGE}:${DOCKER_TAG} --record || true"
+      sh "kubectl apply -f k8s/service.yaml || true"
+      sh "kubectl rollout status deployment/k8s-cicd-demo --timeout=120s"
     }
+  }
+}
 
     stage('Verify') {
       steps {
