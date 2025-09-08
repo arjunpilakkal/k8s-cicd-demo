@@ -51,12 +51,14 @@ pipeline {
   }
 }
 
-    stage('Verify') {
-      steps {
-        sh "kubectl get pods -o wide"
-        sh "kubectl get svc k8s-cicd-demo-svc -o wide"
-      }
+  stage('Verify') {
+  steps {
+    withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
+      sh "kubectl get pods -o wide"
+      sh "kubectl get svc k8s-cicd-demo-svc -o wide"
     }
+  }
+}
   }
 
   post {
