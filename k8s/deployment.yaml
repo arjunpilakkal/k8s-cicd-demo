@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-cicd-demo
+  labels:
+    app: k8s-cicd-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: k8s-cicd-demo
+  template:
+    metadata:
+      labels:
+        app: k8s-cicd-demo
+    spec:
+      containers:
+      - name: web
+        image: <DOCKERHUB_USER>/k8s-cicd-demo:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
