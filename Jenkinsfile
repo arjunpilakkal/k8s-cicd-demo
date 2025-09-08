@@ -4,7 +4,7 @@ pipeline {
   environment {
     DOCKER_IMAGE = "${DOCKERHUB_USER}/k8s-cicd-demo"
     DOCKER_TAG = "latest"
-    KUBECONFIG_CREDENTIAL = "kubeconfig-cred"   // optional: if Jenkins needs admin.conf
+    KUBECONFIG_CREDENTIAL = "kubeconfig-file"   // optional: if Jenkins needs admin.conf
   }
 
   stages {
@@ -42,7 +42,7 @@ pipeline {
 
     stage('Deploy to Kubernetes') {
   steps {
-    withCredentials([file(credentialsId: 'kubeconfig-cred', variable: 'KUBECONFIG')]) {
+    withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
       sh "kubectl set image deployment/k8s-cicd-demo web=${DOCKER_IMAGE}:${DOCKER_TAG} --record || true"
       sh "kubectl apply -f k8s/service.yaml || true"
       sh "kubectl rollout status deployment/k8s-cicd-demo --timeout=120s"
