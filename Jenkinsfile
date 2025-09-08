@@ -3,8 +3,7 @@ pipeline {
 
   environment {
     DOCKER_IMAGE = "${DOCKERHUB_USER}/k8s-cicd-demo"
-    DOCKER_TAG = "latest"
-    KUBECONFIG_CREDENTIAL = "kubeconfig-file"   // optional: if Jenkins needs admin.conf
+    KUBECONFIG_CREDENTIAL = "kubeconfig-file"   // Jenkins credential ID for kubeconfig
   }
 
   stages {
@@ -14,10 +13,24 @@ pipeline {
       }
     }
 
+    stage('Set Docker Tag') {
+      steps {
+        script {
+          // Use short git commit hash as unique tag
+          env.DOCKER_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+          echo "Using Docker tag: ${env.DOCKER_TAG}"
+        }
+      }
+    }
+
     stage('Build Image') {
       steps {
         script {
-          sh "cd app && docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+          sh """
+            cd app
+            docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+            docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
+          """
         }
       }
     }
@@ -25,40 +38,36 @@ pipeline {
     stage('Login & Push') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'dockerHub', usernameVariable: 'DH_USER', passwordVariable: 'DH_PWD')]) {
-          sh 'echo $DH_PWD | docker login -u $DH_USER --password-stdin'
-          sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+          sh """
+            echo \$DH_PWD | docker login -u \$DH_USER --password-stdin
+            docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+            docker push ${DOCKER_IMAGE}:latest
+          """
         }
       }
     }
 
-    /*stage('Deploy to Kubernetes') {
+    stage('Deploy to Kubernetes') {
       steps {
-        // Option A: If Jenkins has kubectl configured (kubeconfig in Jenkins home)
-        sh "kubectl set image deployment/k8s-cicd-demo web=${DOCKER_IMAGE}:${DOCKER_TAG} --record || true"
-        sh "kubectl apply -f k8s/service.yaml || true"
-        sh "kubectl rollout status deployment/k8s-cicd-demo --timeout=120s"
+        withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIAL}", variable: 'KUBECONFIG')]) {
+          sh """
+            kubectl apply -f k8s/deployment.yaml
+            kubectl apply -f k8s/service.yaml
+            kubectl set image deployment/k8s-cicd-demo web=${DOCKER_IMAGE}:${DOCKER_TAG} --record
+            kubectl rollout status deployment/k8s-cicd-demo --timeout=120s
+          """
+        }
       }
-    }*/
-
-   stage('Deploy to Kubernetes') {
-  steps {
-    withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
-      sh "kubectl apply -f k8s/deployment.yaml"
-      sh "kubectl apply -f k8s/service.yaml"
-      sh "kubectl set image deployment/k8s-cicd-demo web=${DOCKER_IMAGE}:${DOCKER_TAG} || true"
-      sh "kubectl rollout status deployment/k8s-cicd-demo --timeout=120s"
     }
-  }
-}
 
-  stage('Verify') {
-  steps {
-    withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
-      sh "kubectl get pods -o wide"
-      sh "kubectl get svc k8s-cicd-demo-svc -o wide"
+    stage('Verify') {
+      steps {
+        withCredentials([file(credentialsId: "${KUBECONFIG_CREDENTIAL}", variable: 'KUBECONFIG')]) {
+          sh "kubectl get pods -o wide"
+          sh "kubectl get svc k8s-cicd-demo-svc -o wide"
+        }
+      }
     }
-  }
-}
   }
 
   post {
