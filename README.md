@@ -1,6 +1,3 @@
----
-
-````markdown
 # 🚀 CI/CD Demo: Jenkins → Docker Hub → Kubernetes
 
 This project shows how to **automate application delivery** using:
@@ -163,7 +160,7 @@ Here’s a section you can **append to your README.md**:
 
 ---
 
-````markdown
+
 ## 🛠️ Troubleshooting Guide
 
 Even with automation, things can go wrong. Here are common issues and fixes:
